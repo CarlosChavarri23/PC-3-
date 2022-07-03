@@ -1,0 +1,275 @@
+---
+title: "Construcción de Base para el Reporte"
+author: "Carlos A. Chávarri B. "
+date: '2022-07-01'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, echo=FALSE, warning=FALSE}
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rio)
+library(DescTools)
+library(ggplot2)
+library(moments)
+library(Rmisc)
+library(e1071)
+library(psych)
+library(dplyr)
+library(gplots)
+library(vcd)
+library(PMCMRplus)
+library(nortest)
+library(car)
+library(stargazer)
+library(lm.beta)
+library(gtools)
+library(jtools)
+library(ggstance)
+library(broom.mixed)
+library(fastDummies)
+library(writexl)
+library(rvest)
+library(jsonlite)
+library(sp)
+library(rgdal)
+library(htmltab)
+library(googledrive)
+library(sf)
+library(stringr)
+library(lubridate)
+library(lmtest)
+library(polycor)
+library(ggcorrplot)
+library(matrixcalc)
+library(GPArotation)
+library(lavaan)
+library(BBmisc)
+library(cluster)
+library(factoextra)
+library(qpcR)
+```
+
+```{r}
+LINK="https://github.com/CarlosChavarri23/PC-3-.git"
+
+```
+
+#Descargar indicadores de pobreza de la base del BM 
+
+```{r}
+brecha="https://github.com/CarlosChavarri23/PC-3-/blob/0b03d59de3c8d3c530a07bff78a482ec98dee73b/Brecha%20de%20pobreza%20$1,%2090%20por%20d%C3%ADa.csv?raw=true"
+
+brecha_sucia=import(brecha)
+
+pobtug="https://github.com/CarlosChavarri23/PC-3-/blob/0b03d59de3c8d3c530a07bff78a482ec98dee73b/Poblaci%C3%B3n%20que%20vive%20en%20barrio%20s%20de%20tugurio.csv?raw=true"
+
+pobtug_sucia=import(pobtug)
+
+
+povheadc="https://github.com/CarlosChavarri23/PC-3-/blob/9ae37cfac11f9a92c662c602fc38bdfe9963af53/Poverty%20headcount%20ratio%20at%20$3.20%20a%20day%20(2011%20PPP)%20(%25%20of%20population).csv?raw=true"
+
+povheadc_sucia=import(povheadc)
+
+```
+
+#Analizar la data 
+
+```{r}
+str(brecha_sucia)
+str(pobtug_sucia)
+str(povheadc_sucia)
+```
+
+```{r}
+names(brecha_sucia)
+
+names (pobtug_sucia)
+
+names(povheadc_sucia)
+```
+
+
+3.	Quédese con los valores para un solo año de cada indicador. Los años no necesariamente deben ser iguales para los tres indicadores, sin embargo, debe cumplir con dos condiciones: el valor debe ser posterior al 2010, y el año elegido debe contener la menor cantidad de valores perdidos. (10 puntos) 
+
+
+```{r}
+brecha_sucia=brecha_sucia[,-c(2:54)]
+
+apply(is.na(brecha_sucia), MARGIN = 2, sum)
+
+
+pobtug_sucia=pobtug_sucia[,-c(2:54)]
+
+apply(is.na(pobtug_sucia), MARGIN = 2, sum)
+
+
+povheadc_sucia= povheadc_sucia[,-c(2:54)]
+
+apply(is.na(povheadc_sucia), MARGIN = 2, sum)
+
+```
+```{r}
+brecha_sucia=brecha_sucia[,c(1,6)]
+pobtug_sucia=pobtug_sucia[,c(1,10)]
+povheadc_sucia=povheadc_sucia[,c(1,6)]
+```
+
+```{r}
+brecha_sucia = brecha_sucia[-c(1),]
+pobtug_sucia = pobtug_sucia[-c(1),]
+povheadc_sucia = povheadc_sucia[-c(1),]
+
+```
+
+```{r}
+colnames(brecha_sucia)=c("country","brecha")
+colnames(pobtug_sucia)=c("country","pobtug")
+colnames(povheadc_sucia)=c("country","povheadc")
+```
+
+
+4.	Junte los tres indicadores en una sola base de datos, y justifique que “join” utilizó para la integración de datos. (5 puntos)
+
+```{r}
+data1=merge(brecha_sucia, pobtug_sucia)
+data2=merge(data1, povheadc_sucia)
+
+```
+
+```{r}
+data2= data2[complete.cases(data2$brecha),]
+data2= data2[complete.cases(data2$pobtug),]
+data2= data2[complete.cases(data2$povheadc),]  
+```
+
+####Es indiferente el join a utilizar pues los elementos son exactamente los mismos.
+
+5.	Cree una variable categórica ordinal sobre uno de los indicadores, y luego elimine el indicador sobre el cual la creo. Justifique el porqué de los intervalos escogidos en la variable categórica. (10 puntos)
+
+
+```{r}
+summary(data2$pobtug)
+```
+```{r}
+data2$pobtug_ORD = ifelse(data2$pobtug<=12.475, 1, ifelse(data2$pobtug>12.475 & data2$pobtug<=24.950, 2, ifelse(data2$pobtug>24.950 & data2$pobtug<=38.139, 3, 4)))
+
+
+```
+
+```{r}
+data2$pobtug_ORD = factor(data2$pobtug_ORD, levels = c(1:4), ordered = TRUE)
+str(data2$pobtug_ORD)
+```
+
+###Los puntos de corte para nuestra variable ordinal fueron escogidos en función percentiles identificados mediante la función summary. 
+
+6.	Descargue la base de datos del Índice de Desarrollo Humano 2019 de la siguiente dirección https://datosmacro.expansion.com/idh ,y súbala a su repositorio de Github. (5 puntos) 
+
+
+```{r}
+IDH_link = "https://datosmacro.expansion.com/idh"
+pweb=read_html(IDH_link)
+pweb
+
+IDH_cs="tr"
+IDH_html = html_nodes(pweb,IDH_cs)
+IDH_texto = html_text(IDH_html)
+head(IDH_texto)
+
+```
+```{r}
+data_IDH=data.frame(IDH_texto)
+head(data_IDH)
+
+```
+
+```{r}
+export(data_IDH,"data_IDH.csv")
+```
+
+
+7.	Realice la limpieza necesaria para la integración de la base de datos de los tres indicadores elegidos y la base de datos de IDH. (10 puntos)   
+
+```{r}
+data_IDH= data_IDH[-1,]
+str(data_IDH)
+data_IDH=data.frame(data_IDH)
+```
+
+```{r}
+#partición y creación de variable 
+data_IDH$country=str_split(data_IDH$data_IDH,"[+]",simplify = T)[,1]
+
+#identification "["
+data_IDH$country=gsub("[[:punct:]]","",data_IDH$country)
+
+#limpieza de espacios
+data_IDH$country =trimws(data_IDH$country,which=c("right"),whitespace = "[\\h\\v]")
+
+```
+
+```{r}
+#atos de IDH, variacion y ranking 
+data_IDH$part2=str_split(data_IDH$data_IDH,"]",simplify = T)[,2]
+```
+## IDH
+```{r}
+#cinco primero caracteres 
+data_IDH$IDH_2019=substr(data_IDH$part2,1,5)
+ 
+data_IDH$IDH_2019=gsub(",",".",data_IDH$IDH_2019)
+```
+
+###VARIACIÓN
+
+```{r}
+#última partición del v2 para sacar el ranking y variación:
+data_IDH$Var=str_split(data_IDH$part2,"º",simplify = T)[,2]
+```
+###RANKING
+
+```{r}
+#caracteres 6 y 7
+data_IDH$Rank=substr(data_IDH$part2,6,7)
+data_IDH$Rank=gsub("º","",data_IDH$Rank)
+```
+
+```{r}
+data_IDH=data_IDH[,c(2,4)]
+head(data_IDH)
+```
+
+```{r}
+str(data_IDH$IDH_2019)
+```
+
+```{r}
+data_IDH$IDH_2019 = as.numeric(data_IDH$IDH_2019)
+```
+
+8.	Junte ambas bases en una sola base de datos, y justifique que “join” utilizó para la integración de datos. Debe obtener una base de datos con 4 variables (5 puntos)
+
+```{r}
+library(dplyr)
+data_final=left_join(data2,data_IDH,by="country") 
+head(data_final)
+```
+####   La data obtenida, tiene cinco variables pues consideramos útiles y gráficas ambas versiones de la variable "Porcentaje de la población que vive en barrios marginales", tanto el porcentaje como la variable de tipo ordinal. En cuanto, al criterio de integración se optó por leftjoin puesto que con cualquiera de los otros criterios no tendríamos ningún NA, lo cuál en términos estadísticos y exploración de data es bastaante improbable. Por ello, a pesar del impacto de los mismos se decició conservar los NA's frente a tener una data bastante más reducida y poco natural. Asimismo, es importante señalar que la información disponible del país a analizar condicionó mucho la elaboración del mismo. 
+
+
+
+```{r}
+export(data_final,"Base_Guatemala1.csv")
+```
+
+
+
