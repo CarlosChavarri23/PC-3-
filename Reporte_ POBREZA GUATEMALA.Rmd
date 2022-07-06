@@ -1,0 +1,148 @@
+---
+title: "REPORTE GUATEMALA"
+author: "Carlos Chávarri"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+### Reporte para la Oficina de estudios económicos y evaluaciones del Min. de Desarrollo e Inclusión Social 
+
+                                                                                  Carlos A. Chávarri Bravo
+                                                        
+                                                                                  Estudiante de Ciencia Política
+
+
+El presente reporte se busca graficar a través de una serie de indicadores macroeconómicos las características de la pobreza y las condiciones del país  de Guatemala en relación al resto de países del mundo. Asimismo, se tiene como objetivo sugerir de manera visual la relación entre los indicadores escogidos y el índice agregado(IDH).  En ese sentido, se tiene como puntos de partido tres indicadores escogidos en función de la información disponible por instituciones como el Banco Mundial y el PNUD. En primer lugar, se tiene disponible el indicador "Brecha de la pobreza a S 1.90" ("brecha") , el cual es un índice que mejora la tasa de recuento de la pobreza que simplemente cuenta a todas las personas por debajo de una línea de pobreza, en una población determinada, y las considera igualmente pobres. Este índice estima la profundidad de la pobreza considerando qué tan lejos, en promedio, están los pobres de esa línea de pobreza, en este caso bastante baja. En segundo lugar, se tien "Población que vive en barrios marginales" ("pobtug"), este indicador socioeconómico, es la proporción de la población urbana que vive en barrios. En este sentido, es sumamente útil para medir por ejemplo el impacto de políticas públicas o el avance/retroceso de la situación económica de la población en función de variables exógenas.En tercer lugar, "Poverty headcount radio at S 3.20 a day" o "Tasa de recuento de la pobreza a $3.20 por día" (povheadc) , el porcentaje de la población que vive por debajo de la(s) línea(s) nacional(es) de pobreza. Al igual que el anterior nos ayuda a hacer un seguimiento de la pobreza más preciso en comparación con el conteo tradicional en proporciones. Finalmente, se utilizará el "Índice de Desarrollo Humano" (IDH_2019)  , indicador elaborado por NU para medir el progreso de los países. El aporte principal de este indicador es que a diferencia de los indicadores tradicionales para medir el desarrollo económico de un país, el IDH analiza la salud, educación e ingresos.
+
+
+2.	Cree una tabla donde reporte el promedio mundial de los tres indicadores elegidos y el IDH de su base de datos, y el valor de dichos indicadores para su país asignado. Describa lo que observa. (10 puntos)
+
+Creación de una base con todos los promedios. 
+
+
+```{r echo=TRUE}
+
+base_guatemala="https://github.com/CarlosChavarri23/PC-3-/raw/main/base_guatemala1.csv"
+
+data_final1=import(base_guatemala)
+
+```
+
+
+```{r echo=TRUE}
+data_final1[,c(2, 3, 4, 5)] = lapply(data_final1[,c(2, 3, 4, 5)], as.numeric)
+```
+
+```{r echo=TRUE}
+brecha_media <- mean(data_final1$brecha, na.rm = TRUE)
+pobtug_media <- mean(data_final1$pobtug, na.rm = TRUE)
+povheadc_media <- mean(data_final1$povheadc, na.rm = TRUE)
+idh_media <- mean(data_final1$IDH_2019, na.rm = TRUE)
+
+```
+
+```{r echo=TRUE}
+tabla_prom = data.frame(brecha_media, pobtug_media, povheadc_media, idh_media)
+```
+
+```{r echo=TRUE}
+row.names(tabla_prom) <- c("Promedio mundial")
+```
+
+```{r echo=TRUE}
+guatemala = data.frame(data_final1[26, ])
+
+```
+
+```{r echo=TRUE}
+guatemala$pobtug_ORD = NULL
+
+```
+
+```{r echo=TRUE}
+row.names(guatemala) = guatemala$country
+
+guatemala$country = NULL
+
+```
+
+```{r echo=TRUE}
+names(tabla_prom) <- c("brecha", "pobtug", "povheadc", "IDH_2019")
+
+```
+
+```{r echo=TRUE}
+tabla_comp <- rbind(tabla_prom, guatemala)
+View(tabla_comp)
+
+export(tabla_comp,"tablareporte.csv")
+
+```
+
+3. Crear los siguientes gráficos
+
+a. Graficar la relación entre el IDH y uno de los indicadores del Banco Mundial
+
+#Es posible observar la existencia de una relación inversa relativamente fuerte entre porcentaje de la población que vive en barrios marginales y el Índice de Desarrollo Humano. Mientras mayor es la proporción de la población que vive en barrios marginales menor es el IDH.
+
+
+```{r}
+ggplot(data_final1, aes(x=pobtug, y=IDH_2019)) + 
+  geom_point()+
+  geom_smooth(method=lm)
+```
+b. La distribución de países según la variable ordinal que creo en la pregunta 5 de la primera parte (pobtug)
+
+```{r}
+graf2 = ggplot(data2, aes(x = pobtug_ORD, fill = pobtug_ORD))  + theme(legend.position = "bottom") +
+  geom_density(alpha = 0.5, color = "brown", fill = "brown", linetype = "dashed") + ggtitle("Distribución de países según intervalos sobre % de población que vive en barrios marginales") + xlab("") + ylab("Densidad")
+
+graf2
+```
+
+c. Densidad de otro de los indicadores del Banco Mundial.
+
+```{r}
+graf3 = ggplot(data_final1, aes(x = povheadc, fill = povheadc))  + theme(legend.position = "bottom") +
+  geom_density(alpha = 0.4, color = "blue", fill = "blue", linetype = "dashed") + ggtitle("Tasa de recuento de la pobreza a $3.20 por día") + xlab("") + ylab("Densidad")
+graf3
+
+```
+
+d. Un gráfico libre que usted considere pertinente
+
+```{r}
+data_final1= data_final1[complete.cases(data_final1$brecha),]
+data_final1= data_final1[complete.cases(data_final1$pobtug),]
+data_final1= data_final1[complete.cases(data_final1$povheadc),]  
+data_final1= data_final1[complete.cases(data_final1$IDH_2019),]
+```
+
+
+```{r}
+
+graf4=ggplot(data_final1, aes(x= brecha, y= IDH_2019, guatemala)) + geom_point() +
+  geom_point(size=1.3, shape=26) +
+  geom_text(label=data_final1$country, vjust=-0.5, hjust = 1,color="orange", size=1.9) +
+  
+  
+    labs(title = "Brecha de pobreza a $1,90 e índice de Desarrollo Humano",
+       subtitle = "Fuente: Banco Mundial   -  IDH 2019 (PNUD)",
+       x = "Brecha de pobreza a $1, 90",
+       y = "IDH(2019)") +
+  
+  scale_color_fivethirtyeight() +
+  
+  theme_fivethirtyeight()
+graf4
+```
+###Al igual que en el gràfico en el que se explora la relaciòn entre el porcentaje de la población que vive en barrios marginales y el Índice de Desarrrollo Humano, existe una relación inversamente proporcional entre la brecha de pobreza al $1,90 al día y el IDH(2019). Lo cual significa que mientras menor sea el porcentaje de la población por debajo de esa línea de pobreza, mayor será el índice de desarrollo obtenido por el país. Esto nos hace ver que la medición de profundidad de la pobreza en comparación con indicadores socioeconómicos tradicionales, ayudan a entender de una mejor manera los factores que permiten el avance o retroceso en el desarrollo de un país. 
+
+5. Conclusiones preliminares: 
+
+El presente reporte nos permite visualizar un secreto a voces que es la situación real del país frente al mundo. Nicaragua se encuentra en una situación crítica, siendo comparable con países en los cuales se viven conflictos étnicos de caracter armado(Sudán), disputas vigentes por el poder (Burkina Faso), crisis humanitarias producto de guerras civiles (Liberia), intensas dictaduras e historias de segregación racial. En este sentido, este reporte no debería caer en saco rato y apuesta a ser un llamado de atención a la clase política nacional, así como, una exhortación por la inclusión de los más desfavorecidos y en situación de vulnerabilidad. Solo mediante políticas que busquen el recate de estos sectores de la población estaremos cerca de lograr un desarrollo económico real.
+El "país de la eterna primavera" debe tomar en cuenta debe tomar en todos los sectores de su población (urbana y rural) y tener como bandera el respeto por la diversidad cultural. Finalmente, este reporte busca servir como insumo para una mayor eficiencia de las políticas en mención y ayudar de esta manera a que progresivamente la perspectiva que el mundo tiene sobre país mejore.   
+
